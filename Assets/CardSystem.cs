@@ -1,6 +1,7 @@
 ﻿using JetBrains.Annotations;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 public class CardSystem : MonoBehaviour
         {
@@ -58,6 +59,14 @@ public bool isLookingDown = false; // da li igrač trenutno gleda dole (ažurira
 public int cardCount = 2;          // počinješ sa 2 kartice
 public int maxCards = 4;
 public Image[] cardImages = new Image[4]; // Image komponente kartica 1-4 (one koje prikazuju sprite)
+
+[Header("Replace Indicators")]
+public GameObject[] replaceIndicators = new GameObject[4]; // pod-objekti "replace sprite" na karticama 1-4
+
+[Header("Pickup Info Panel")]
+public GameObject cardPickupInfo;       // ceo panel
+public TMP_Text cardPickupInfo_Name;    // tekst sa imenom/rečju
+public Image cardPickupInfo_Image;      // slika kartice
 
 
         void Start(){
@@ -147,23 +156,55 @@ public Image[] cardImages = new Image[4]; // Image komponente kartica 1-4 (one k
             sfxSource.PlayOneShot(scrollSounds[randomIndex]);
         }
 
-        public bool AddCard(Sprite sprite, string word)
-{
-    if (cardCount >= maxCards) return false; // nema mesta
+        public bool IsFull => cardCount >= maxCards;
 
+void SetCardData(int slot, Sprite sprite, string word)
+{
     TypingListener[] typings = { card1Typing, card2Typing, card3Typing, card4Typing };
     Transform[] cards = { card1, card2, card3, card4 };
-
-    int slot = cardCount; // prvo prazno mesto: sa 2 kartice je to indeks 2 (kartica 3)
 
     Image img = cardImages[slot] != null ? cardImages[slot] : cards[slot].GetComponent<Image>();
     if (img != null) img.sprite = sprite;
     else Debug.LogWarning("Kartica " + (slot + 1) + " nema Image komponentu za sprite!");
 
     if (typings[slot] != null) typings[slot].SetWord(word);
+}
 
+public bool AddCard(Sprite sprite, string word)
+{
+    if (IsFull) return false;
+
+    SetCardData(cardCount, sprite, word); // prvo prazno mesto
     cardCount++;
     return true;
+}
+
+public void ReplaceSelectedCard(Sprite sprite, string word)
+{
+    SetCardData(selectedCardIndex, sprite, word); // menja trenutno selektovanu karticu
+}
+
+public void ShowReplaceIndicator(bool show)
+{
+    for (int i = 0; i < replaceIndicators.Length; i++)
+    {
+        if (replaceIndicators[i] != null)
+            replaceIndicators[i].SetActive(show && i == selectedCardIndex);
+    }
+}
+
+public void ShowPickupInfo(Sprite sprite, string word)
+{
+    if (cardPickupInfo == null) return;
+
+    cardPickupInfo.SetActive(true);
+    if (cardPickupInfo_Name != null) cardPickupInfo_Name.text = word;
+    if (cardPickupInfo_Image != null) cardPickupInfo_Image.sprite = sprite;
+}
+
+public void HidePickupInfo()
+{
+    if (cardPickupInfo != null) cardPickupInfo.SetActive(false);
 }
 
         void Update()

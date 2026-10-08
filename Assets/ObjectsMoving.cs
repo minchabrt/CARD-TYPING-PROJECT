@@ -42,44 +42,67 @@ public CardSystem cardSystem;
     void Update()
     {
         if (heldObject == null)
-            {
-                Ray ray = FPCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-
-                if (Physics.Raycast(ray, out RaycastHit hit, maxDistance))
-                {
-
-                    if (hit.collider.CompareTag("food") && Input.GetMouseButtonDown(0))
-                    {
-                        
-                        Rigidbody rb = hit.collider.GetComponent<Rigidbody>();
-                        if (rb != null)
-                        {
-
-                            heldObject = hit.transform;
-                            rb.isKinematic = true;
-                            heldObject.SetParent(holdPoint); // attach na ruku/kam objekt
-
-                            heldObject.position = Vector3.MoveTowards(heldObject.position, holdPoint.position, 2 * Time.deltaTime);
-
-
-                            
-
-                        }
-                    }
-
-                    if (hit.collider.CompareTag("CARD") && Input.GetKeyDown(KeyCode.E))
 {
-    CardPickup pickup = hit.collider.GetComponent<CardPickup>();
+    bool canReplaceCard = false;
+    CardPickup lookedPickup = null;
 
-    if (pickup != null && cardSystem.AddCard(pickup.cardSprite, pickup.word))
+    Ray ray = FPCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+
+    if (Physics.Raycast(ray, out RaycastHit hit, maxDistance))
     {
-        Destroy(hit.collider.gameObject);
-    }
-}
+        // ---- FOOD (tvoj postojeći kod, nepromenjen) ----
+        if (hit.collider.CompareTag("food") && Input.GetMouseButtonDown(0))
+        {
+            Rigidbody rb = hit.collider.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                heldObject = hit.transform;
+                rb.isKinematic = true;
+                heldObject.SetParent(holdPoint);
+                heldObject.position = Vector3.MoveTowards(heldObject.position, holdPoint.position, 2 * Time.deltaTime);
+            }
+        }
 
+        // ---- CARD ----
+        if (hit.collider.CompareTag("CARD"))
+        {
+            CardPickup pickup = hit.collider.GetComponent<CardPickup>();
 
+            if (pickup != null)
+            {
+                    lookedPickup = pickup;
+
+                if (cardSystem.IsFull)
+                {
+                    canReplaceCard = true; // pali indikator na selektovanoj kartici
+
+                    if (Input.GetKeyDown(KeyCode.E))
+                    {
+                        cardSystem.ReplaceSelectedCard(pickup.cardSprite, pickup.word);
+                        Destroy(hit.collider.gameObject);
+                        canReplaceCard = false;
+                        lookedPickup = null;
+                    }
+                }
+                else if (Input.GetKeyDown(KeyCode.E))
+                {
+                    if (cardSystem.AddCard(pickup.cardSprite, pickup.word))
+                    {
+                        Destroy(hit.collider.gameObject);
+                        lookedPickup = null;
+                    }
                 }
             }
+        }
+    }
+
+    cardSystem.ShowReplaceIndicator(canReplaceCard); // svaki frame: upali ako gledaš prop, inače ugasi
+    
+    if (lookedPickup != null)
+    cardSystem.ShowPickupInfo(lookedPickup.cardSprite, lookedPickup.word);
+else
+    cardSystem.HidePickupInfo();
+}
 
 
 
@@ -87,6 +110,11 @@ public CardSystem cardSystem;
             // Ako već držimo, prati poziciju
             else
             {
+
+                cardSystem.ShowReplaceIndicator(false);
+                cardSystem.HidePickupInfo();
+
+
                 Rigidbody rb = heldObject.GetComponent<Rigidbody>();
 
 
@@ -119,7 +147,7 @@ public CardSystem cardSystem;
 
 
 
-                    if (eatingBar.fillAmount == 1)
+                    if (eatingBar.fillAmount >= 1f)
                     {
 
                         
